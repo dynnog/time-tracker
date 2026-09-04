@@ -91,15 +91,19 @@ The database should remain entirely local to the user's machine.
 
 ## 4. Platforms
 
-Primary target:
+Primary supported platforms:
 
 -   macOS
+-   Windows
 
-Architecture should avoid unnecessary platform-specific assumptions so
-Windows support can be added later.
+macOS and Windows are first-class supported platforms. Windows support is not a future enhancement. All core architecture and implementation decisions must account for both platforms from the start.
+
+Platform-specific behavior must be isolated behind small native/service abstractions and must not leak into the React UI or core timer/database logic. Avoid hardcoded macOS paths, AppleScript as a core dependency, Unix-only shell/process assumptions, or filesystem logic that assumes `/` path separators. Prefer Tauri and standard cross-platform APIs for paths, dialogs, filesystem access, notifications, and application lifecycle behavior.
+
+Build and packaging must be validated on each target operating system. macOS release artifacts should be built/tested on macOS and Windows release artifacts should be built/tested on Windows.
 
 Meeting detection should initially target the meeting software the user
-actually uses most frequently.
+actually uses most frequently, while preserving separate platform-specific implementations where required.
 
 Likely candidates:
 
@@ -625,6 +629,16 @@ This allows different implementations for:
 -   Google Meet
 -   Other applications
 
+It must also allow platform-specific detector implementations without changing the timer system, for example:
+
+``` text
+MeetingDetector
+├── MacMeetingDetector
+└── WindowsMeetingDetector
+```
+
+The React UI and timer service must consume the common detector interface and must not contain macOS- or Windows-specific meeting detection logic.
+
 ------------------------------------------------------------------------
 
 ## 20. Automatic Meeting Workflow
@@ -1013,7 +1027,9 @@ Build:
 Acceptance criteria:
 
 -   Application launches successfully on macOS.
--   Database initializes automatically.
+-   Application launches successfully on Windows.
+-   Database initializes automatically on both supported platforms.
+-   Core application code contains no unnecessary OS-specific path or shell assumptions.
 
 ### Phase 2 --- Customers
 
@@ -1110,7 +1126,7 @@ Meeting Started
 Meeting Ended
 ```
 
-Test with Microsoft Teams.
+Test with Microsoft Teams. Validate the detector architecture on both macOS and Windows; platform-specific native implementations may differ, but they must emit the same `meeting_started` and `meeting_ended` events.
 
 Acceptance criteria:
 
@@ -1201,12 +1217,18 @@ Follow these rules throughout development:
     phase.
 18. Run relevant tests, TypeScript checks, and Rust compilation checks
     before considering a phase complete.
+19. Treat macOS and Windows as first-class supported platforms.
+20. Keep core timer, database, timesheet, and export logic platform-neutral.
+21. Use Tauri or standard cross-platform APIs for filesystem paths, dialogs, notifications, and application lifecycle behavior.
+22. Isolate unavoidable OS-specific code behind explicit native/service abstractions.
+23. Do not introduce AppleScript, Unix-only commands, Windows-only APIs, or hardcoded platform paths into shared application logic.
+24. Before a release is considered complete, validate packaging and core workflows on both macOS and Windows.
 
 ------------------------------------------------------------------------
 
 ## 36. Initial Codex Assignment
 
-**Start by implementing only Phases 1 through 3.**
+**Start by implementing only Phases 1 through 3. All implementation must support both macOS and Windows.**
 
 Do not implement automatic meeting detection yet.
 
