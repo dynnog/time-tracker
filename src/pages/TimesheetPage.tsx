@@ -16,7 +16,13 @@ import {
   toLocalDateInput,
   toLocalTimeInput,
   weekUtcIsoBounds,
+  formatDurationSeconds
 } from "../utils/time";
+import {
+  getWeeklyTotal,
+  getCustomerTotals,
+  getDailyTotals,
+} from "../services/reportingService";
 
 interface DayGroup {
   dateKey: string;
@@ -97,6 +103,11 @@ export function TimesheetPage() {
   }, [weekStart]);
 
   const days = useMemo(() => buildWeekDays(weekStart, entries), [weekStart, entries]);
+
+  const weeklyTotal = getWeeklyTotal(entries);
+  const customerTotals = getCustomerTotals(entries);
+  const dailyTotals = getDailyTotals(entries);
+
   const editorActivities = useMemo(() => {
     if (!editor) return activities;
     if (!editor.activityId || activities.some((activity) => String(activity.id) === editor.activityId)) return activities;
@@ -176,6 +187,44 @@ export function TimesheetPage() {
         <h2>{formatWeekLabel(weekStart)}</h2>
         <button className="secondary" onClick={() => moveWeek(1)}>Next Week</button>
       </div>
+
+      <section className="timesheet-summary">
+        <div className="summary-card weekly-total">
+          <span>Weekly Total</span>
+          <strong>{formatDurationSeconds(weeklyTotal)}</strong>
+        </div>
+
+        <div className="summary-card">
+          <h3>By Customer</h3>
+
+          {customerTotals.length === 0 ? (
+            <p>No tracked time this week.</p>
+          ) : (
+            customerTotals.map((item) => (
+              <div key={item.customer} className="summary-row">
+                <span>{item.customer}</span>
+                <strong>{formatDurationSeconds(item.durationSeconds)}</strong>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="summary-card">
+          <h3>Daily Totals</h3>
+
+          {dailyTotals.map((item) => (
+            <div key={item.date} className="summary-row">
+              <span>
+                {new Date(`${item.date}T12:00:00`).toLocaleDateString(undefined, {
+                  weekday: "long",
+                })}
+              </span>
+
+              <strong>{formatDurationSeconds(item.durationSeconds)}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {error && <div className="alert error">{error}</div>}
 

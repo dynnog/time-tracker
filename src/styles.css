@@ -45,3 +45,38 @@ label { display: grid; gap: 8px; font-weight: 700; font-size: 13px; } input, sel
 .modal-card .activity-name { margin: 0; }
 .modal-card .row-actions { margin-top: 8px; }
 @media (max-width: 960px) { .page { padding: 48px 32px; }.customer-layout { grid-template-columns: 1fr; }.editor-card { order: -1; }.app-shell { grid-template-columns: 190px 1fr; }.timesheet-layout, .timesheet-layout:has(.editor-card) { grid-template-columns: 1fr; } }
+
+.timesheet-summary {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .summary-card {
+    padding: 16px;
+    border: 1px solid #dcdcdc;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+  
+  .weekly-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .weekly-total strong {
+    font-size: 1.5rem;
+  }
+  
+  .summary-card h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+  }
+  
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 6px 0;
+  }
