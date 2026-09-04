@@ -198,6 +198,9 @@ pub fn run() {
     ];
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main_window(app);
+        }))
         .manage(TrayTimerState::default())
         .setup(|app| {
             let open = MenuItem::with_id(app, "open", "Open Time Tracker", true, None::<&str>)?;

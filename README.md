@@ -32,6 +32,7 @@ Implemented:
 - Favorite customers with priority placement in customer selectors
 - Optional native timer and meeting notifications
 - Live `HH:MM:SS` menu-bar duration on macOS and duration tooltip on Windows, returning to `00:00:00` when idle, with state-aware Start New Timer and Stop actions; tray and sidebar Start actions open a compact customer/activity/notes window without expanding the full app
+- Single-instance desktop lifecycle: subsequent launches focus the existing app, and Windows release builds do not open a console window
 
 Not implemented yet:
 - Calendar integration and idle detection
