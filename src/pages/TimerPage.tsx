@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { listActivities } from "../db/activities";
 import { listCustomers } from "../db/customers";
-import { getRunningTimer, startTimer, stopTimer } from "../db/timeEntries";
-import type { Activity, Customer, RunningTimer } from "../types";
+import { getRunningTimer, listRecentTimerChoices, startTimer, stopTimer } from "../db/timeEntries";
+import type { Activity, Customer, RecentTimerChoice, RunningTimer } from "../types";
+import { notify } from "../services/notificationService";
 import { elapsedSeconds, formatElapsed, formatStartTime } from "../utils/time";
 
 interface TimerPageProps {
@@ -20,11 +21,13 @@ export function TimerPage({ runningTimer, onTimerChange }: TimerPageProps) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [overlap, setOverlap] = useState<RunningTimer | null>(null);
+  const [recentChoices, setRecentChoices] = useState<RecentTimerChoice[]>([]);
 
   useEffect(() => {
-    Promise.all([listCustomers(), listActivities()]).then(([customerRows, activityRows]) => {
+    Promise.all([listCustomers(), listActivities(), listRecentTimerChoices()]).then(([customerRows, activityRows, recentRows]) => {
       setCustomers(customerRows);
       setActivities(activityRows);
+      setRecentChoices(recentRows);
       if (activityRows.length > 0) setActivityId(String(activityRows[0].id));
     }).catch((e) => setError(String(e)));
   }, [runningTimer]);
@@ -55,6 +58,7 @@ export function TimerPage({ runningTimer, onTimerChange }: TimerPageProps) {
       const timer = await startTimer({ customerId: Number(customerId), activityId: Number(activityId), notes });
       onTimerChange(timer);
       setNotes("");
+      void notify("Timer started", `${timer.customer_name} — ${timer.activity_name}`);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
@@ -74,15 +78,28 @@ export function TimerPage({ runningTimer, onTimerChange }: TimerPageProps) {
     setBusy(true);
     setError("");
     try {
+      const stoppedTimer = runningTimer ?? await getRunningTimer();
       await stopTimer();
       onTimerChange(null);
       setOverlap(null);
+      if (stoppedTimer) void notify("Timer stopped", `${stoppedTimer.customer_name} — ${stoppedTimer.activity_name}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key !== "Enter" || event.repeat || busy || overlap) return;
+      event.preventDefault();
+      if (runningTimer) void handleStop();
+      else void handleStart();
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [runningTimer, busy, overlap, customerId, activityId, notes]);
 
   return (
     <section className="page narrow-page">
@@ -123,6 +140,27 @@ export function TimerPage({ runningTimer, onTimerChange }: TimerPageProps) {
         </div>
       ) : (
         <div className="timer-card">
+          {recentChoices.length > 0 && (
+            <div className="recent-choices">
+              <span className="field-label">Recent combinations</span>
+              <div className="recent-choice-list">
+                {recentChoices.map((choice) => (
+                  <button
+                    className="recent-choice"
+                    key={`${choice.customer_id}-${choice.activity_id}`}
+                    type="button"
+                    onClick={() => {
+                      setCustomerId(String(choice.customer_id));
+                      setActivityId(String(choice.activity_id));
+                    }}
+                  >
+                    <strong>{choice.customer_name}</strong>
+                    <span>{choice.activity_name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <label>Customer
             <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
               <option value="">Select customer</option>
@@ -141,6 +179,7 @@ export function TimerPage({ runningTimer, onTimerChange }: TimerPageProps) {
           {customers.length === 0 && <p className="hint">Add an active customer before starting your first timer.</p>}
         </div>
       )}
+      <p className="shortcut-hint">Press <kbd>Ctrl + Enter</kbd> to {runningTimer ? "stop" : "start"} the timer.</p>
     </section>
   );
 }

@@ -23,6 +23,7 @@ describe("time calculations", () => {
   });
   it("derives elapsed time from timestamps", () => expect(elapsedSeconds("2026-09-01T10:00:00Z", Date.parse("2026-09-01T10:01:15Z"))).toBe(75));
   it("formats elapsed time", () => expect(formatElapsed(3727)).toBe("01:02:07"));
+  it("formats sub-minute elapsed time without rounding to zero", () => expect(formatElapsed(45)).toBe("00:00:45"));
   it("formats compact hours and minutes", () => expect(formatHoursMinutes(3727)).toBe("1h 02m"));
   it("rejects end times that are not after start", () => {
     expect(() => requireEndAfterStart("2026-09-01T10:00:00Z", "2026-09-01T10:00:00Z")).toThrow("End time must be after start time.");

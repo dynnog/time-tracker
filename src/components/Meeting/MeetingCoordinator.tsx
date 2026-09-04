@@ -17,11 +17,13 @@ import {
   type MeetingEventContext,
 } from "../../services/meetingService";
 import type { Activity, Customer, MeetingSession, RunningTimer } from "../../types";
-import { formatHoursMinutes, formatStartTime } from "../../utils/time";
+import { elapsedSeconds, formatElapsed, formatStartTime } from "../../utils/time";
+import { notify } from "../../services/notificationService";
 
 interface MeetingCoordinatorProps {
   runningTimer: RunningTimer | null;
   onTimerChange: (timer: RunningTimer | null) => void;
+  onMeetingTrackingChange: (session: MeetingSession | null) => void;
 }
 
 interface MeetingConflict {
@@ -29,7 +31,7 @@ interface MeetingConflict {
   timer: RunningTimer;
 }
 
-export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoordinatorProps) {
+export function MeetingCoordinator({ runningTimer, onTimerChange, onMeetingTrackingChange }: MeetingCoordinatorProps) {
   const runningTimerRef = useRef(runningTimer);
   const ignoredUntilEnd = useRef(false);
   const [active, setActive] = useState<MeetingSession | null>(null);
@@ -42,8 +44,32 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [tick, setTick] = useState(Date.now());
 
   useEffect(() => { runningTimerRef.current = runningTimer; }, [runningTimer]);
+  useEffect(() => { onMeetingTrackingChange(active); }, [active, onMeetingTrackingChange]);
+
+  useEffect(() => {
+    if (!active) return;
+    setTick(Date.now());
+    const interval = window.setInterval(() => setTick(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [active]);
+
+  useEffect(() => {
+    if (!pending) return;
+    setError("");
+    void Promise.all([listCustomers(), listActivities()]).then(([customerRows, activityRows]) => {
+      setCustomers(customerRows);
+      setActivities(activityRows);
+      setCustomerId((current) => customerRows.some((customer) => String(customer.id) === current) ? current : "");
+      setActivityId((current) => {
+        if (activityRows.some((activity) => String(activity.id) === current)) return current;
+        const customerMeeting = activityRows.find((activity) => activity.name === "Customer Meeting");
+        return String(customerMeeting?.id ?? activityRows[0]?.id ?? "");
+      });
+    }).catch((reason) => setError(reason instanceof Error ? reason.message : String(reason)));
+  }, [pending]);
 
   useEffect(() => {
     let mounted = true;
@@ -62,7 +88,10 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
         return;
       }
       const session = await beginMeetingSession(application);
-      if (mounted) setActive(session);
+      if (mounted) {
+        setActive(session);
+        void notify("Meeting detected", `${session.application_name} meeting timer started.`);
+      }
     }
 
     async function meetingStarted(context: MeetingEventContext) {
@@ -73,10 +102,12 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
     async function meetingEnded() {
       ignoredUntilEnd.current = false;
       if (mounted) setConflict(null);
+      const wasActive = await getActiveMeetingSession();
       const session = await completeActiveMeetingSession();
       if (mounted) {
         setActive(null);
         if (session) setPending(session);
+        if (wasActive && session) void notify("Meeting ended", "Select a customer to save the tracked meeting time.");
       }
     }
 
@@ -91,6 +122,8 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
       else void meetingDetector.stop().then(() => meetingEnded()).catch(reportError);
     };
     window.addEventListener("meeting-detection-preference", preferenceChanged);
+    const trayStopMeeting = () => void meetingEnded().catch(reportError);
+    window.addEventListener("tray-stop-meeting", trayStopMeeting);
 
     void Promise.all([
       getActiveMeetingSession(),
@@ -116,6 +149,7 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
       unsubscribeStarted();
       unsubscribeEnded();
       window.removeEventListener("meeting-detection-preference", preferenceChanged);
+      window.removeEventListener("tray-stop-meeting", trayStopMeeting);
     };
   }, []);
 
@@ -129,6 +163,7 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
       const session = await beginMeetingSession(conflict.application);
       setActive(session);
       setConflict(null);
+      void notify("Meeting detected", `${session.application_name} meeting timer started.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -139,6 +174,24 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
   function ignoreMeeting() {
     ignoredUntilEnd.current = true;
     setConflict(null);
+  }
+
+  async function stopMeetingTracking() {
+    if (!active) return;
+    setBusy(true);
+    setError("");
+    try {
+      const session = await completeActiveMeetingSession();
+      setActive(null);
+      if (session) {
+        setPending(session);
+        void notify("Meeting ended", "Select a customer to save the tracked meeting time.");
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function savePending() {
@@ -184,7 +237,11 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
       {active && (
         <div className="meeting-banner">
           <span className="running-dot" />
-          Tracking {active.application_name} meeting since {formatStartTime(active.start_time)}
+          <span>Tracking {active.application_name} meeting since {formatStartTime(active.start_time)}</span>
+          <strong className="meeting-elapsed">{formatElapsed(elapsedSeconds(active.start_time, tick))}</strong>
+          <button className="secondary meeting-stop" disabled={busy} onClick={() => void stopMeetingTracking()}>
+            {busy ? "Stopping…" : "Stop meeting timer"}
+          </button>
         </div>
       )}
       {error && <div className="alert error coordinator-error">Meeting tracking: {error}</div>}
@@ -210,7 +267,8 @@ export function MeetingCoordinator({ runningTimer, onTimerChange }: MeetingCoord
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="meeting-complete-title">
           <div className="modal-card meeting-complete-card">
             <h2 id="meeting-complete-title">Meeting Completed</h2>
-            <p>{pending.application_name} · {formatHoursMinutes(pending.duration_seconds ?? 0)}</p>
+            <p>{pending.application_name}</p>
+            <div className="completed-meeting-duration">{formatElapsed(pending.duration_seconds ?? 0)}</div>
             <label>Customer
               <select value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
                 <option value="">Select customer</option>

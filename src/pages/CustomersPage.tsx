@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { archiveCustomer, createCustomer, listCustomers, updateCustomer } from "../db/customers";
+import { archiveCustomer, createCustomer, listCustomers, setCustomerFavorite, updateCustomer } from "../db/customers";
 import type { Customer } from "../types";
 
 export function CustomersPage() {
@@ -50,6 +50,16 @@ export function CustomersPage() {
     await reload();
   }
 
+  async function toggleFavorite(customer: Customer) {
+    setError("");
+    try {
+      await setCustomerFavorite(customer.id, customer.favorite !== 1);
+      await reload();
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
   return (
     <section className="page">
       <header className="page-header split-header">
@@ -65,8 +75,8 @@ export function CustomersPage() {
           <div className="customer-list">
             {filtered.map((customer) => (
               <article className={customer.active ? "customer-row" : "customer-row archived"} key={customer.id}>
-                <div><strong>{customer.name}</strong><p>{customer.notes || "No notes"}</p></div>
-                <div className="row-actions"><button className="secondary" onClick={() => beginEdit(customer)}>Edit</button><button className="ghost" onClick={() => void toggleArchive(customer)}>{customer.active ? "Archive" : "Restore"}</button></div>
+                <div><strong>{customer.favorite === 1 && <span className="favorite-marker" aria-label="Favorite">★ </span>}{customer.name}</strong><p>{customer.notes || "No notes"}</p></div>
+                <div className="row-actions"><button className="favorite-button" aria-pressed={customer.favorite === 1} title={customer.favorite === 1 ? "Remove from favorites" : "Add to favorites"} onClick={() => void toggleFavorite(customer)}>{customer.favorite === 1 ? "★" : "☆"}</button><button className="secondary" onClick={() => beginEdit(customer)}>Edit</button><button className="ghost" onClick={() => void toggleArchive(customer)}>{customer.active ? "Archive" : "Restore"}</button></div>
               </article>
             ))}
             {filtered.length === 0 && <div className="empty-state">No customers match this view.</div>}

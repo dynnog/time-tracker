@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { listActivities } from "../db/activities";
 import { listCustomers } from "../db/customers";
-import { deleteTimeEntry, listCompletedEntries, updateTimeEntry } from "../db/timeEntries";
+import { deleteTimeEntry, duplicateTimeEntry, listCompletedEntries, updateTimeEntry } from "../db/timeEntries";
 import type { Activity, Customer, TimeEntry } from "../types";
 import {
   addDays,
   combineEntryRange,
   formatDayHeading,
-  formatHoursMinutes,
+  formatElapsed,
   formatLocalDate,
   formatStartTime,
   formatWeekLabel,
@@ -16,7 +16,6 @@ import {
   toLocalDateInput,
   toLocalTimeInput,
   weekUtcIsoBounds,
-  formatDurationSeconds
 } from "../utils/time";
 import {
   getWeeklyTotal,
@@ -172,6 +171,22 @@ export function TimesheetPage() {
     }
   }
 
+  async function duplicateEntry(entry: TimeEntry) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await duplicateTimeEntry(entry.id);
+      await reload();
+      setNotice("Time entry duplicated. You can edit the copy if its date or time should change.");
+      window.dispatchEvent(new Event("time-entry-changed"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function exportCsv(kind: "detailed" | "summary") {
     setExporting(kind);
     setError("");
@@ -209,7 +224,7 @@ export function TimesheetPage() {
   const previewDuration = (() => {
     if (!editor) return null;
     try {
-      return formatHoursMinutes(combineEntryRange(editor.date, editor.startTime, editor.endTime, editor.allowNextDayEnd).durationSeconds);
+      return formatElapsed(combineEntryRange(editor.date, editor.startTime, editor.endTime, editor.allowNextDayEnd).durationSeconds);
     } catch {
       return null;
     }
@@ -245,7 +260,7 @@ export function TimesheetPage() {
       <section className="timesheet-summary">
         <div className="summary-card weekly-total">
           <span>Weekly Total</span>
-          <strong>{formatDurationSeconds(weeklyTotal)}</strong>
+          <strong>{formatElapsed(weeklyTotal)}</strong>
         </div>
 
         <div className="summary-card">
@@ -257,7 +272,7 @@ export function TimesheetPage() {
             customerTotals.map((item) => (
               <div key={item.customer} className="summary-row">
                 <span>{item.customer}</span>
-                <strong>{formatDurationSeconds(item.durationSeconds)}</strong>
+                <strong>{formatElapsed(item.durationSeconds)}</strong>
               </div>
             ))
           )}
@@ -274,7 +289,7 @@ export function TimesheetPage() {
                 })}
               </span>
 
-              <strong>{formatDurationSeconds(item.durationSeconds)}</strong>
+              <strong>{formatElapsed(item.durationSeconds)}</strong>
             </div>
           ))}
         </div>
@@ -289,7 +304,7 @@ export function TimesheetPage() {
             <section className="day-group" key={day.dateKey}>
               <header className="day-heading">
                 <h3>{formatDayHeading(day.dateKey)}</h3>
-                <span>{formatHoursMinutes(day.totalSeconds)}</span>
+                <span>{formatElapsed(day.totalSeconds)}</span>
               </header>
               {day.entries.length === 0 ? (
                 <div className="empty-day">No entries</div>
@@ -302,12 +317,13 @@ export function TimesheetPage() {
                     <p className="entry-range">
                       {formatStartTime(entry.start_time)} – {formatStartTime(entry.end_time)}
                       {" · "}
-                      {formatHoursMinutes(entry.duration_seconds)}
+                      {formatElapsed(entry.duration_seconds)}
                     </p>
                     {entry.notes && <p className="entry-notes">{entry.notes}</p>}
                   </div>
                   <div className="row-actions">
                     <button className="secondary" onClick={() => { setPendingDelete(null); setEditor(openEditor(entry)); }}>Edit</button>
+                    <button className="secondary" disabled={busy} onClick={() => void duplicateEntry(entry)}>Duplicate</button>
                     <button className="ghost" onClick={() => { setEditor(null); setPendingDelete(entry); }}>Delete</button>
                   </div>
                 </article>
@@ -366,7 +382,7 @@ export function TimesheetPage() {
             <p>
               {formatStartTime(pendingDelete.start_time)} – {formatStartTime(pendingDelete.end_time)}
               {" · "}
-              {formatHoursMinutes(pendingDelete.duration_seconds)}
+              {formatElapsed(pendingDelete.duration_seconds)}
             </p>
             <p>This cannot be undone.</p>
             <div className="row-actions">

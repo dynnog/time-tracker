@@ -4,7 +4,7 @@ import type { Customer } from "../types";
 export async function listCustomers(includeArchived = false): Promise<Customer[]> {
   const db = await getDatabase();
   const where = includeArchived ? "" : "WHERE active = 1";
-  return db.select<Customer[]>(`SELECT * FROM customers ${where} ORDER BY name COLLATE NOCASE`);
+  return db.select<Customer[]>(`SELECT * FROM customers ${where} ORDER BY favorite DESC, name COLLATE NOCASE`);
 }
 
 export async function createCustomer(name: string, notes: string): Promise<void> {
@@ -27,4 +27,12 @@ export async function updateCustomer(id: number, name: string, notes: string, ac
 export async function archiveCustomer(id: number): Promise<void> {
   const db = await getDatabase();
   await db.execute("UPDATE customers SET active = 0, updated_at = ? WHERE id = ?", [new Date().toISOString(), id]);
+}
+
+export async function setCustomerFavorite(id: number, favorite: boolean): Promise<void> {
+  const db = await getDatabase();
+  await db.execute(
+    "UPDATE customers SET favorite = ?, updated_at = ? WHERE id = ?",
+    [favorite ? 1 : 0, new Date().toISOString(), id],
+  );
 }

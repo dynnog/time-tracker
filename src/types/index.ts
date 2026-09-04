@@ -2,6 +2,7 @@ export interface Customer {
   id: number;
   name: string;
   active: number;
+  favorite: number;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +31,13 @@ export interface TimerStartInput {
   notes?: string;
 }
 
+export interface RecentTimerChoice {
+  customer_id: number;
+  customer_name: string;
+  activity_id: number;
+  activity_name: string;
+}
+
 export interface TimeEntry {
   id: number;
   customer_id: number;
@@ -54,7 +62,7 @@ export interface TimeEntryUpdate {
 
 export interface MeetingSession {
   id: number;
-  application_id: "teams" | "zoom" | "google-meet";
+  application_id: "teams" | "zoom";
   application_name: string;
   source: string;
   start_time: string;

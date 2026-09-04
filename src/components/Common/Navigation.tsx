@@ -4,9 +4,10 @@ interface NavigationProps {
   page: Page;
   onChange: (page: Page) => void;
   running: boolean;
+  onQuickStart: () => void;
 }
 
-export function Navigation({ page, onChange, running }: NavigationProps) {
+export function Navigation({ page, onChange, running, onQuickStart }: NavigationProps) {
   const items: Array<{ id: Page; label: string }> = [
     { id: "timer", label: "Timer" },
     { id: "timesheet", label: "Timesheet" },
@@ -31,6 +32,9 @@ export function Navigation({ page, onChange, running }: NavigationProps) {
           </button>
         ))}
       </nav>
+      <button className="sidebar-quick-start" disabled={running} onClick={onQuickStart}>
+        {running ? "Timer Running" : "+ Start New Timer"}
+      </button>
     </aside>
   );
 }

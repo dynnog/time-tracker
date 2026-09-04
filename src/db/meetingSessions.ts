@@ -55,21 +55,18 @@ export async function saveMeetingSession(session: MeetingSession, input: Meeting
   if (!activityName) throw new Error("Select a valid activity.");
   const now = new Date().toISOString();
 
-  await db.execute("BEGIN IMMEDIATE");
-  try {
-    await db.execute(
-      `INSERT INTO time_entries
-       (customer_id, activity_id, activity_name, start_time, end_time, duration_seconds, notes, source, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [input.customerId, input.activityId, activityName, session.start_time, session.end_time,
-        session.duration_seconds, input.notes.trim() || null, session.source, now, now],
-    );
-    await db.execute("DELETE FROM meeting_sessions WHERE id = ?", [session.id]);
-    await db.execute("COMMIT");
-  } catch (error) {
-    await db.execute("ROLLBACK").catch(() => undefined);
-    throw error;
-  }
+  // Tauri SQL uses a connection pool, so separate BEGIN/INSERT/DELETE/COMMIT
+  // calls are not guaranteed to run on the same connection. Autocommit each
+  // statement and use the meeting id to make retries safe instead.
+  await db.execute(
+    `INSERT INTO time_entries
+     (customer_id, activity_id, activity_name, start_time, end_time, duration_seconds, notes, source, created_at, updated_at, meeting_session_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(meeting_session_id) WHERE meeting_session_id IS NOT NULL DO NOTHING`,
+    [input.customerId, input.activityId, activityName, session.start_time, session.end_time,
+      session.duration_seconds, input.notes.trim() || null, session.source, now, now, session.id],
+  );
+  await db.execute("DELETE FROM meeting_sessions WHERE id = ? AND end_time IS NOT NULL", [session.id]);
 }
 
 export async function discardMeetingSession(id: number): Promise<void> {

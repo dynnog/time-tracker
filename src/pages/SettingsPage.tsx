@@ -7,6 +7,10 @@ import {
   type MeetingEvent,
   type MeetingEventContext,
 } from "../services/meetingService";
+import {
+  areNativeNotificationsEnabled,
+  setNativeNotificationsEnabled,
+} from "../services/notificationService";
 
 interface EventRecord {
   id: number;
@@ -20,6 +24,7 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [enabled, setEnabled] = useState(isMeetingDetectionEnabled);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(areNativeNotificationsEnabled);
 
   useEffect(() => {
     const record = (context: MeetingEventContext) => setEvents((current) => [
@@ -49,12 +54,25 @@ export function SettingsPage() {
     }
   }
 
+  async function toggleNotifications() {
+    setBusy(true);
+    setError("");
+    try {
+      const next = !notificationsEnabled;
+      const granted = await setNativeNotificationsEnabled(next);
+      setNotificationsEnabled(granted);
+      if (next && !granted) setError("Notification permission was not granted. You can enable it in your system settings.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="page">
       <header className="page-header">
         <p className="eyebrow">Diagnostics</p>
         <h1>Meeting Detection</h1>
-        <p>Manage automatic meeting tracking and inspect its Teams, Zoom, and Google Meet signals.</p>
+        <p>Manage automatic meeting tracking and inspect its Teams and Zoom signals.</p>
       </header>
 
       {error && <div className="alert error">{error}</div>}
@@ -85,7 +103,7 @@ export function SettingsPage() {
                 </div>
                 <p>{application.signal}</p>
               </div>
-            )) : <p className="detector-signal">Start monitoring, then join a Teams, Zoom, or Google Meet call.</p>}
+            )) : <p className="detector-signal">Start monitoring, then join a Teams or Zoom call.</p>}
           </div>
           <div className="row-actions">
             <button className="primary" disabled={busy || enabled} onClick={() => void setDetectionRunning(true)}>
@@ -115,9 +133,24 @@ export function SettingsPage() {
       </div>
 
       <div className="diagnostic-note">
-        <strong>Google Meet limitation</strong>
-        <p>Browser audio is only a possible Google Meet signal until a Meet tab can be confirmed. Low-confidence browser signals remain diagnostic and do not create time entries.</p>
+        <strong>Detection scope</strong>
+        <p>Automatic meeting tracking currently supports the Teams and Zoom desktop applications. Browser-based meetings are ignored.</p>
       </div>
+
+      <section className="detector-card notification-settings">
+        <div className="detector-heading">
+          <div>
+            <h2>Native notifications</h2>
+            <p>Show a system notification when timers start or stop and when a detected meeting needs a customer.</p>
+          </div>
+          <span className={`status-pill ${notificationsEnabled ? "" : "inactive"}`}>
+            {notificationsEnabled ? "Enabled" : "Disabled"}
+          </span>
+        </div>
+        <button className={notificationsEnabled ? "secondary" : "primary"} disabled={busy} onClick={() => void toggleNotifications()}>
+          {notificationsEnabled ? "Disable Notifications" : "Enable Notifications"}
+        </button>
+      </section>
     </section>
   );
 }

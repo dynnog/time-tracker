@@ -3,9 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 export type MeetingEvent = "meeting_started" | "meeting_ended";
 
 export interface DetectedMeetingApplication {
-  id: "teams" | "zoom" | "google-meet";
+  id: "teams" | "zoom";
   name: string;
-  confidence: "high" | "low";
+  confidence: "high";
   signal: string;
 }
 

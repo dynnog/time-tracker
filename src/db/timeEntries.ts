@@ -1,5 +1,5 @@
 import { getDatabase } from "./database";
-import type { RunningTimer, TimeEntry, TimeEntryUpdate, TimerStartInput } from "../types";
+import type { RecentTimerChoice, RunningTimer, TimeEntry, TimeEntryUpdate, TimerStartInput } from "../types";
 import { requireEndAfterStart } from "../utils/time";
 
 export async function getRunningTimer(): Promise<RunningTimer | null> {
@@ -59,6 +59,21 @@ export async function stopTimer(): Promise<void> {
   );
 }
 
+export async function listRecentTimerChoices(limit = 3): Promise<RecentTimerChoice[]> {
+  const db = await getDatabase();
+  return db.select<RecentTimerChoice[]>(
+    `SELECT te.customer_id, c.name AS customer_name, te.activity_id, a.name AS activity_name
+     FROM time_entries te
+     JOIN customers c ON c.id = te.customer_id AND c.active = 1
+     JOIN activities a ON a.id = te.activity_id AND a.active = 1
+     WHERE te.end_time IS NOT NULL
+     GROUP BY te.customer_id, c.name, te.activity_id, a.name
+     ORDER BY MAX(te.start_time) DESC, MAX(te.id) DESC
+     LIMIT ?`,
+    [Math.max(1, Math.min(limit, 10))],
+  );
+}
+
 const ENTRY_SELECT = `
   SELECT te.id, te.customer_id, c.name AS customer_name, c.active AS customer_active,
          te.activity_id, COALESCE(a.name, te.activity_name, '') AS activity_name,
@@ -111,4 +126,18 @@ export async function deleteTimeEntry(id: number): Promise<void> {
   const db = await getDatabase();
   const result = await db.execute("DELETE FROM time_entries WHERE id = ? AND end_time IS NOT NULL", [id]);
   if (result.rowsAffected === 0) throw new Error("That time entry could not be deleted.");
+}
+
+export async function duplicateTimeEntry(id: number): Promise<void> {
+  const db = await getDatabase();
+  const now = new Date().toISOString();
+  const result = await db.execute(
+    `INSERT INTO time_entries
+     (customer_id, activity_id, activity_name, start_time, end_time, duration_seconds, notes, source, created_at, updated_at)
+     SELECT customer_id, activity_id, activity_name, start_time, end_time, duration_seconds, notes, source, ?, ?
+     FROM time_entries
+     WHERE id = ? AND end_time IS NOT NULL`,
+    [now, now, id],
+  );
+  if (result.rowsAffected === 0) throw new Error("That time entry could not be duplicated.");
 }
