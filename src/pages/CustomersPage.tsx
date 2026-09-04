@@ -84,7 +84,7 @@ export function CustomersPage() {
         </div>
         <aside className="editor-card">
           <h2>{editing ? "Edit customer" : "Add customer"}</h2>
-          <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. ARUI" /></label>
+          <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Customer name" /></label>
           <label>Notes <span className="optional">Optional</span><textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
           <button className="primary" onClick={() => void save()} disabled={!name.trim()}>{editing ? "Save Changes" : "Add Customer"}</button>
           {editing && <button className="ghost full" onClick={() => { setEditing(null); setName(""); setNotes(""); }}>Cancel</button>}
