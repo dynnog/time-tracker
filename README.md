@@ -1,10 +1,10 @@
 # Local Desktop Time Tracker
 
-A local-first macOS desktop time tracker built with Tauri, React, TypeScript, and SQLite.
+A local-first macOS and Windows desktop time tracker built with Tauri, React, TypeScript, and SQLite.
 
 ## Current scope
 
-This repository currently implements Phases 1–4 from `AGENTS.md`.
+This repository currently implements Phases 1–6 from `AGENTS.md`.
 
 Implemented:
 - Tauri + React + TypeScript + Vite foundation
@@ -18,10 +18,12 @@ Implemented:
 - Weekly timesheet with Monday–Sunday navigation
 - Completed entry review, edit, and delete
 - Daily totals grouped by local calendar date
+- Weekly, daily, and customer reporting totals
+- Detailed CSV export through a native save dialog
+- Date-and-customer summary CSV export through a native save dialog
 
 Not implemented yet:
-- Weekly reporting totals by customer
-- CSV/Excel export
+- Excel export
 - Meeting detection
 - Calendar/idle/menu-bar features
 
@@ -31,6 +33,8 @@ On macOS install:
 - Xcode Command Line Tools: `xcode-select --install`
 - Node.js 20+
 - Rust via rustup: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
+On Windows install Node.js 20+, Rust with the stable MSVC toolchain, Microsoft C++ Build Tools, and WebView2 as described in the Tauri prerequisites.
 
 ## Run locally
 

@@ -23,6 +23,7 @@ import {
   getCustomerTotals,
   getDailyTotals,
 } from "../services/reportingService";
+import { createDetailedCsv, createSummaryCsv, saveCsvFile } from "../services/exportService";
 
 interface DayGroup {
   dateKey: string;
@@ -84,6 +85,8 @@ export function TimesheetPage() {
   const [pendingDelete, setPendingDelete] = useState<TimeEntry | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState<"detailed" | "summary" | null>(null);
+  const [notice, setNotice] = useState("");
 
   async function reload(start = weekStart) {
     const bounds = weekUtcIsoBounds(start);
@@ -163,6 +166,25 @@ export function TimesheetPage() {
     }
   }
 
+  async function exportCsv(kind: "detailed" | "summary") {
+    setExporting(kind);
+    setError("");
+    setNotice("");
+    try {
+      const week = formatLocalDate(weekStart);
+      const detailed = kind === "detailed";
+      const saved = await saveCsvFile(
+        detailed ? createDetailedCsv(entries) : createSummaryCsv(entries),
+        `time-tracker-${week}-${detailed ? "detailed" : "summary"}.csv`,
+      );
+      if (saved) setNotice(`${detailed ? "Detailed" : "Summary"} CSV exported successfully.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(null);
+    }
+  }
+
   const previewDuration = (() => {
     if (!editor) return null;
     try {
@@ -179,6 +201,14 @@ export function TimesheetPage() {
           <p className="eyebrow">History</p>
           <h1>Timesheet</h1>
           <p>Review completed work for the selected week. Running timers stay on the Timer screen until they are stopped.</p>
+        </div>
+        <div className="export-actions">
+          <button className="secondary" onClick={() => void exportCsv("detailed")} disabled={exporting !== null}>
+            {exporting === "detailed" ? "Exporting…" : "Export Detailed CSV"}
+          </button>
+          <button className="secondary" onClick={() => void exportCsv("summary")} disabled={exporting !== null}>
+            {exporting === "summary" ? "Exporting…" : "Export Summary CSV"}
+          </button>
         </div>
       </header>
 
@@ -227,6 +257,7 @@ export function TimesheetPage() {
       </section>
 
       {error && <div className="alert error">{error}</div>}
+      {notice && <div className="alert success">{notice}</div>}
 
       <div className="timesheet-layout">
         <div className="day-list">

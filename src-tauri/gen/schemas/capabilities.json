@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Default desktop capability for the local time tracker","local":true,"windows":["main"],"permissions":["core:default","sql:default","sql:allow-execute","sql:allow-select"]}}
+{"default":{"identifier":"default","description":"Default desktop capability for the local time tracker","local":true,"windows":["main"],"permissions":["core:default","dialog:allow-save","fs:allow-write-text-file","sql:default","sql:allow-execute","sql:allow-select"]}}
