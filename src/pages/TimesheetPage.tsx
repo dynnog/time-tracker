@@ -105,6 +105,12 @@ export function TimesheetPage() {
     void reload(weekStart).catch((e) => setError(String(e)));
   }, [weekStart]);
 
+  useEffect(() => {
+    const refresh = () => void reload().catch((e) => setError(String(e)));
+    window.addEventListener("time-entry-changed", refresh);
+    return () => window.removeEventListener("time-entry-changed", refresh);
+  }, [weekStart]);
+
   const days = useMemo(() => buildWeekDays(weekStart, entries), [weekStart, entries]);
 
   const weeklyTotal = getWeeklyTotal(entries);

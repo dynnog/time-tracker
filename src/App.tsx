@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigation, type Page } from "./components/Common/Navigation";
+import { MeetingCoordinator } from "./components/Meeting/MeetingCoordinator";
 import { getRunningTimer } from "./db/timeEntries";
 import { CustomersPage } from "./pages/CustomersPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -21,6 +22,7 @@ export default function App() {
     <div className="app-shell">
       <Navigation page={page} onChange={setPage} running={Boolean(runningTimer)} />
       <main className="content">
+        <MeetingCoordinator runningTimer={runningTimer} onTimerChange={setRunningTimer} />
         {startupError && <div className="alert error startup-error">Database startup failed: {startupError}</div>}
         {page === "timer" && <TimerPage runningTimer={runningTimer} onTimerChange={setRunningTimer} />}
         {page === "customers" && <CustomersPage />}

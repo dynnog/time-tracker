@@ -4,7 +4,7 @@ A local-first macOS and Windows desktop time tracker built with Tauri, React, Ty
 
 ## Current scope
 
-This repository currently implements Phases 1–6 from `AGENTS.md`.
+This repository currently implements Phases 1–9 from `AGENTS.md`, with Google Meet limited to diagnostic detection pending browser-tab confirmation.
 
 Implemented:
 - Tauri + React + TypeScript + Vite foundation
@@ -22,10 +22,15 @@ Implemented:
 - Detailed CSV export through a native save dialog
 - Date-and-customer summary CSV export through a native save dialog
 - Excel export with Detailed Entries and Weekly Summary sheets
+- Isolated Teams, Zoom, and Google Meet microphone-signal detector with macOS and Windows adapters
+- Meeting Started/Meeting Ended diagnostic event screen
+- Automatic persisted meeting sessions for high-confidence Teams and Zoom detections
+- Manual-timer conflict handling and post-meeting customer/activity confirmation
 
 Not implemented yet:
-- Meeting detection
 - Calendar/idle/menu-bar features
+
+The meeting detector observes active microphone use by Teams, Zoom, and supported browsers. High-confidence Teams and Zoom signals can create meeting entries. Browser microphone use is reported as a low-confidence Google Meet candidate because the desktop process alone cannot identify the active browser tab, so it remains disconnected from automatic tracking.
 
 ## Prerequisites
 

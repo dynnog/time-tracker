@@ -51,3 +51,19 @@ export interface TimeEntryUpdate {
   endTime: string;
   notes: string;
 }
+
+export interface MeetingSession {
+  id: number;
+  application_id: "teams" | "zoom" | "google-meet";
+  application_name: string;
+  source: string;
+  start_time: string;
+  end_time: string | null;
+  duration_seconds: number | null;
+}
+
+export interface MeetingEntryInput {
+  customerId: number;
+  activityId: number;
+  notes: string;
+}

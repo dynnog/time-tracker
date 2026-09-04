@@ -22,6 +22,8 @@ export async function startTimer(input: TimerStartInput): Promise<RunningTimer> 
   if (existing) throw new Error("A timer is already running.");
 
   const db = await getDatabase();
+  const meetings = await db.select<{ id: number }[]>("SELECT id FROM meeting_sessions WHERE end_time IS NULL LIMIT 1");
+  if (meetings.length > 0) throw new Error("A meeting is already being tracked.");
   const activities = await db.select<{ name: string }[]>("SELECT name FROM activities WHERE id = ?", [input.activityId]);
   const activityName = activities[0]?.name;
   if (!activityName) throw new Error("Select a valid activity.");
