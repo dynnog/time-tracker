@@ -147,6 +147,14 @@ fn show_quick_start(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+fn show_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
 #[tauri::command]
 fn open_quick_start(app: AppHandle) -> Result<(), String> {
     show_quick_start(&app)
@@ -205,11 +213,7 @@ pub fn run() {
                 .show_menu_on_left_click(true)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "open" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.unminimize();
-                            let _ = window.set_focus();
-                        }
+                        show_main_window(app);
                     }
                     "start" => {
                         let _ = show_quick_start(app);
@@ -260,6 +264,12 @@ pub fn run() {
                 .add_migrations("sqlite:time-tracker.db", migrations)
                 .build(),
         )
-        .run(tauri::generate_context!())
-        .expect("error while running time tracker");
+        .build(tauri::generate_context!())
+        .expect("error while building time tracker")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                show_main_window(app);
+            }
+        });
 }
