@@ -21,9 +21,9 @@ Implemented:
 - Weekly, daily, and customer reporting totals
 - Detailed CSV export through a native save dialog
 - Date-and-customer summary CSV export through a native save dialog
+- Excel export with Detailed Entries and Weekly Summary sheets
 
 Not implemented yet:
-- Excel export
 - Meeting detection
 - Calendar/idle/menu-bar features
 

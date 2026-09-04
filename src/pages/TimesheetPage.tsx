@@ -85,7 +85,7 @@ export function TimesheetPage() {
   const [pendingDelete, setPendingDelete] = useState<TimeEntry | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [exporting, setExporting] = useState<"detailed" | "summary" | null>(null);
+  const [exporting, setExporting] = useState<"detailed" | "summary" | "excel" | null>(null);
   const [notice, setNotice] = useState("");
 
   async function reload(start = weekStart) {
@@ -185,6 +185,21 @@ export function TimesheetPage() {
     }
   }
 
+  async function exportExcel() {
+    setExporting("excel");
+    setError("");
+    setNotice("");
+    try {
+      const { saveExcelFile } = await import("../services/excelExportService");
+      const saved = await saveExcelFile(entries, `time-tracker-${formatLocalDate(weekStart)}.xlsx`);
+      if (saved) setNotice("Excel workbook exported successfully.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(null);
+    }
+  }
+
   const previewDuration = (() => {
     if (!editor) return null;
     try {
@@ -208,6 +223,9 @@ export function TimesheetPage() {
           </button>
           <button className="secondary" onClick={() => void exportCsv("summary")} disabled={exporting !== null}>
             {exporting === "summary" ? "Exporting…" : "Export Summary CSV"}
+          </button>
+          <button className="secondary" onClick={() => void exportExcel()} disabled={exporting !== null}>
+            {exporting === "excel" ? "Exporting…" : "Export Excel"}
           </button>
         </div>
       </header>
